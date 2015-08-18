@@ -1,0 +1,240 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Gift-ares-checkins] gift-ares/lib as_hashtable.c,1.9,1.10
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/gift-ares-checkins/2007-February/index.html" >
+   <LINK REL="made" HREF="mailto:gift-ares-checkins%40lists.berlios.de?Subject=Re%3A%20%5BGift-ares-checkins%5D%20gift-ares/lib%20as_hashtable.c%2C1.9%2C1.10&In-Reply-To=%3C20070213002710.12EC1D7E13%40mail.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Gift-ares-checkins] gift-ares/lib as_hashtable.c,1.9,1.10</H1>
+    <B>mkern</B> 
+    <A HREF="mailto:gift-ares-checkins%40lists.berlios.de?Subject=Re%3A%20%5BGift-ares-checkins%5D%20gift-ares/lib%20as_hashtable.c%2C1.9%2C1.10&In-Reply-To=%3C20070213002710.12EC1D7E13%40mail.berlios.de%3E"
+       TITLE="[Gift-ares-checkins] gift-ares/lib as_hashtable.c,1.9,1.10">nobody at sheep.berlios.de
+       </A><BR>
+    <I>Tue Feb 13 01:27:10 CET 2007</I>
+    <P><UL>
+        
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10">[ date ]</a>
+              <a href="thread.html#10">[ thread ]</a>
+              <a href="subject.html#10">[ subject ]</a>
+              <a href="author.html#10">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Update of /cvsroot/gift-ares/gift-ares/lib
+In directory sheep:/tmp/cvs-serv14790/lib
+
+Modified Files:
+	as_hashtable.c 
+Log Message:
+Cleanup which fixes some unknown memory bugs.
+
+Index: as_hashtable.c
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/lib/as_hashtable.c,v
+retrieving revision 1.9
+retrieving revision 1.10
+diff -u -d -r1.9 -r1.10
+--- as_hashtable.c	4 Dec 2004 11:54:15 -0000	1.9
++++ as_hashtable.c	13 Feb 2007 00:25:39 -0000	1.10
+@@ -588,85 +588,35 @@
+ void as_hashtable_foreach (ASHashTable *table, ASHashTableForeachFunc func,
+                            void *udata)
+ {
+-	ASHashTableEntry *e = NULL;
+-    ASHashTableEntry *parent = NULL;
+-    ASHashTableEntry *next;
+-	ASHashTableEntry *remember_e = NULL, *remember_parent = NULL;
+-	unsigned int index = table-&gt;tablelength;
+-	unsigned int i, j,tablelength;
+-	as_bool remove;
++	ASHashTableEntry **e;
++	unsigned int i;
+ 
+     if (table-&gt;entrycount == 0)
+ 		return;
+ 
+-	/* Needs a cleanup, but should work now. */
+-
+-    for (i = 0; i &lt; table-&gt;tablelength; i++)
+-    {
+-        if (table-&gt;table[i])
+-        {
+-            e = table-&gt;table[i];
+-            index = i;
+-            break;
+-        }
+-    }
+-
+-	for (;;)
++	for (i = 0; i &lt; table-&gt;tablelength; i++)
+ 	{
+-		remove = func (e, udata);
++		e = &amp;table-&gt;table[i];
+ 
+-		if (remove)
++		while (*e)
+ 		{
+-			if (!parent)
+-				table-&gt;table[index] = e-&gt;next;
+-			else
+-				parent-&gt;next = e-&gt;next;
++			if (func (*e, udata))
++			{
++				/* Remove entry */
++				ASHashTableEntry *old = *e;
+ 
+-			/* itr-&gt;e is now outside the hashtable */
+-			remember_e = e;
+-			table-&gt;entrycount--;
+-			if (table-&gt;copy_keys)
+-				free (remember_e-&gt;key);
++				*e = (*e)-&gt;next;
+ 	
+-		    /* Advance the iterator, correcting the parent */
+-			remember_parent = parent;
+-		}
+-
+-		/* move on to next entry */
+-		next = e-&gt;next;
+-		if (next)
+-		{
+-	        parent = e;
+-			e = next;
+-
+-			if (remove)
++				/* Free entry */
++				table-&gt;entrycount--;
++				if (table-&gt;copy_keys)
++					free (old-&gt;key);		
++				free (old);
++			}
++			else
+ 			{
+-				if (parent == remember_e)
+-					parent = remember_parent;
+-				free (remember_e);
++				e = &amp;((*e)-&gt;next);
+ 			}
+-			continue;
+-		}
+-
+-		tablelength = table-&gt;tablelength;
+-		parent = NULL;
+-
+-		if (tablelength &lt;= (j = ++(index)))
+-			return;
+-
+-		while (!(next = table-&gt;table[j]))
+-		{
+-	        if (++j &gt;= tablelength)
+-				return;
+-		}
+-		index = j;
+-		e = next;
+-
+-		if (remove)
+-		{
+-			if (parent == remember_e)
+-				parent = remember_parent;
+-			free (remember_e);
+ 		}
+ 	}
+ }
+@@ -677,52 +627,24 @@
+ void *as_hashtable_find (ASHashTable *table, ASHashTableForeachFunc func,
+                          void *udata)
+ {
+-	ASHashTableEntry *e = NULL;
+-    ASHashTableEntry *parent = NULL;
+-    ASHashTableEntry *next;
+-    unsigned int index = table-&gt;tablelength;
+-	unsigned int i, j,tablelength;
++	ASHashTableEntry *e;
++	unsigned int i;
+ 
+     if (table-&gt;entrycount == 0)
+ 		return NULL;
+ 
+-    for (i = 0; i &lt; table-&gt;tablelength; i++)
+-    {
+-        if (table-&gt;table[i])
+-        {
+-            e = table-&gt;table[i];
+-            index = i;
+-            break;
+-        }
+-    }
+-
+-	for (;;)
++	for (i = 0; i &lt; table-&gt;tablelength; i++)
+ 	{
+-		if (func (e, udata))
+-			return e-&gt;val;
+-
+-		/* move on to next entry */
+-		next = e-&gt;next;
+-		if (next)
++		while ((e = table-&gt;table[i]))
+ 		{
+-	        parent = e;
+-			e = next;
+-			continue;
+-		}
+-		tablelength = table-&gt;tablelength;
+-		parent = NULL;
+-
+-		if (tablelength &lt;= (j = ++(index)))
+-			return NULL;
++			if (func (e, udata))
++				return e-&gt;val;
+ 
+-		while (!(next = table-&gt;table[j]))
+-		{
+-	        if (++j &gt;= tablelength)
+-				return NULL;
++			e = e-&gt;next;
+ 		}
+-		index = j;
+-		e = next;
+ 	}
++
++	return NULL;
+ }
+ 
+ /*****************************************************************************/
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10">[ date ]</a>
+              <a href="thread.html#10">[ thread ]</a>
+              <a href="subject.html#10">[ subject ]</a>
+              <a href="author.html#10">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/gift-ares-checkins">More information about the Gift-ares-checkins
+mailing list</a><br>
+</body></html>

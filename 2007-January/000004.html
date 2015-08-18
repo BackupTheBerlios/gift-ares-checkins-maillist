@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Gift-ares-checkins] gift-ares/lib as_ares.h, 1.69,	1.70 as_session.c, 1.51, 1.52
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/gift-ares-checkins/2007-January/index.html" >
+   <LINK REL="made" HREF="mailto:gift-ares-checkins%40lists.berlios.de?Subject=Re%3A%20%5BGift-ares-checkins%5D%20gift-ares/lib%20as_ares.h%2C%201.69%2C%0A%091.70%20as_session.c%2C%201.51%2C%201.52&In-Reply-To=%3C20070114143054.A4BD6D5959%40mail.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000003.html">
+   <LINK REL="Next"  HREF="000005.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Gift-ares-checkins] gift-ares/lib as_ares.h, 1.69,	1.70 as_session.c, 1.51, 1.52</H1>
+    <B>mkern</B> 
+    <A HREF="mailto:gift-ares-checkins%40lists.berlios.de?Subject=Re%3A%20%5BGift-ares-checkins%5D%20gift-ares/lib%20as_ares.h%2C%201.69%2C%0A%091.70%20as_session.c%2C%201.51%2C%201.52&In-Reply-To=%3C20070114143054.A4BD6D5959%40mail.berlios.de%3E"
+       TITLE="[Gift-ares-checkins] gift-ares/lib as_ares.h, 1.69,	1.70 as_session.c, 1.51, 1.52">nobody at sheep.berlios.de
+       </A><BR>
+    <I>Sun Jan 14 15:30:54 CET 2007</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000003.html">[Gift-ares-checkins] gift-ares ChangeLog,1.10,1.11
+</A></li>
+        <LI>Next message: <A HREF="000005.html">[Gift-ares-checkins] gift-ares/lib as_share_man.c,1.18,1.19
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4">[ date ]</a>
+              <a href="thread.html#4">[ thread ]</a>
+              <a href="subject.html#4">[ subject ]</a>
+              <a href="author.html#4">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Update of /cvsroot/gift-ares/gift-ares/lib
+In directory sheep:/tmp/cvs-serv31195/lib
+
+Modified Files:
+	as_ares.h as_session.c 
+Log Message:
+Ping supernode every 3 minutes.
+
+Index: as_ares.h
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/lib/as_ares.h,v
+retrieving revision 1.69
+retrieving revision 1.70
+diff -u -d -r1.69 -r1.70
+--- as_ares.h	26 Nov 2005 13:34:05 -0000	1.69
++++ as_ares.h	14 Jan 2007 14:29:31 -0000	1.70
+@@ -226,11 +226,12 @@
+ /* Timeout for supernode handshake after connecting */
+ #define AS_SESSION_HANDSHAKE_TIMEOUT (30 * SECONDS)
+ 
+-/* Maximum period of inactivity for established supernode connections */
+-#define AS_SESSION_IDLE_TIMEOUT (8 * MINUTES)
++/* Time between stats requests (pings) sent to supernode. Ares seems to
++ * disconnects us if we don't sent a ping every 5 minutes. */
++#define AS_SESSION_PING_INTERVAL (3 * MINUTES)
+ 
+ /* Timeout for ping replies */
+-#define AS_SESSION_PING_TIMEOUT (1 * MINUTES)
++#define AS_SESSION_PING_TIMEOUT (2 * MINUTES)
+ 
+ /* Number of simultaneous connection attempts when connecting to supernodes */
+ #define AS_SESSION_PARALLEL_ATTEMPTS (10)
+
+Index: as_session.c
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/lib/as_session.c,v
+retrieving revision 1.51
+retrieving revision 1.52
+diff -u -d -r1.51 -r1.52
+--- as_session.c	5 Jan 2006 16:37:38 -0000	1.51
++++ as_session.c	14 Jan 2007 14:29:31 -0000	1.52
+@@ -199,8 +199,6 @@
+ 		return FALSE;
+ 	}
+ 
+-	timer_reset (session-&gt;ping_timer);
+-
+ 	return TRUE;
+ }
+ 
+@@ -286,18 +284,20 @@
+ 	ASPacketType packet_type;
+ 	as_uint16 packet_len;
+ 
+-	if (net_sock_error (fd))
++	if (input == INVALID_INPUT || net_sock_error (fd))
+ 	{
+-		AS_HEAVY_DBG_2 (&quot;Connection with %s:%d closed remotely&quot;,
+-		                net_ip_str (session-&gt;host), session-&gt;port);
++		AS_WARN_2 (&quot;Bad fd for connection with %s:%d. Closing session.&quot;,
++		           net_ip_str (session-&gt;host), session-&gt;port);
+ 		session_error (session);
+ 		return;
+ 	}
+ 
++	assert (session-&gt;input == input);
++
+ 	if (!as_packet_recv (session-&gt;packet, session-&gt;c))	
+ 	{
+-		AS_WARN_2 (&quot;Recv failed from %s:%d&quot;, net_ip_str (session-&gt;host),
+-		           session-&gt;port);
++		AS_DBG_2 (&quot;Connection to %s:%d closed remotely&quot;,
++		          net_ip_str (session-&gt;host), session-&gt;port);
+ 		session_error (session);
+ 		return;
+ 	}
+@@ -455,10 +455,10 @@
+ 	if (AS-&gt;upman)
+ 	{
+ 		/* FIXME: These values are not accurate if queuing is done by giFT */
+-		as_packet_put_le16 (packet, 0); /* 'my_speed' */
++		as_packet_put_le16 (packet, 0); /* 'my_speed' bytes/sec divided by 100 */
+ 		as_packet_put_8 (packet, (as_uint8)AS-&gt;upman-&gt;nuploads);
+ 		as_packet_put_8 (packet, (as_uint8)AS_CONF_INT (AS_UPLOAD_MAX_ACTIVE));
+-		as_packet_put_8 (packet, (as_uint8)0); /* 'proxy_count' */
++		as_packet_put_8 (packet, (as_uint8)0); /* 0x00 hardcoded */
+ 		as_packet_put_8 (packet, (as_uint8)AS-&gt;upman-&gt;nqueued);
+ 	}
+ 	else
+@@ -664,9 +664,12 @@
+ 	if (!session_set_state (session, SESSION_CONNECTED, TRUE))
+ 		return FALSE; /* session was freed */
+ 
+-	session-&gt;ping_timer = timer_add (AS_SESSION_IDLE_TIMEOUT,
++	/* setup ping timer and send one ping right now */
++	session-&gt;ping_timer = timer_add (AS_SESSION_PING_INTERVAL,
+ 	                                 (TimerCallback)session_ping, session);
+ 
++	session_ping (session);
++
+ 	return TRUE;
+ }
+ 
+@@ -711,7 +714,7 @@
+ /* we sent a ping and got no response: disconnect */
+ static as_bool session_ping_timeout (ASSession *session)
+ {
+-	AS_ERR_2 (&quot;Ping timeout for %s:%d&quot;,
++	AS_ERR_2 (&quot;Ping timeout for %s:%d, closing session.&quot;,
+ 	          net_ip_str (session-&gt;host), session-&gt;port);
+ 
+ 	session_error (session); /* callback may free us */
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000003.html">[Gift-ares-checkins] gift-ares ChangeLog,1.10,1.11
+</A></li>
+	<LI>Next message: <A HREF="000005.html">[Gift-ares-checkins] gift-ares/lib as_share_man.c,1.18,1.19
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4">[ date ]</a>
+              <a href="thread.html#4">[ thread ]</a>
+              <a href="subject.html#4">[ subject ]</a>
+              <a href="author.html#4">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/gift-ares-checkins">More information about the Gift-ares-checkins
+mailing list</a><br>
+</body></html>

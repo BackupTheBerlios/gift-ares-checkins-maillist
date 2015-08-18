@@ -1,0 +1,92 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Gift-ares-checkins] gift-ares/lib as_share_man.c,1.18,1.19
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/gift-ares-checkins/2007-January/index.html" >
+   <LINK REL="made" HREF="mailto:gift-ares-checkins%40lists.berlios.de?Subject=Re%3A%20%5BGift-ares-checkins%5D%20gift-ares/lib%20as_share_man.c%2C1.18%2C1.19&In-Reply-To=%3C20070114143703.05B66D3D96%40mail.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000004.html">
+   <LINK REL="Next"  HREF="000006.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Gift-ares-checkins] gift-ares/lib as_share_man.c,1.18,1.19</H1>
+    <B>mkern</B> 
+    <A HREF="mailto:gift-ares-checkins%40lists.berlios.de?Subject=Re%3A%20%5BGift-ares-checkins%5D%20gift-ares/lib%20as_share_man.c%2C1.18%2C1.19&In-Reply-To=%3C20070114143703.05B66D3D96%40mail.berlios.de%3E"
+       TITLE="[Gift-ares-checkins] gift-ares/lib as_share_man.c,1.18,1.19">nobody at sheep.berlios.de
+       </A><BR>
+    <I>Sun Jan 14 15:37:03 CET 2007</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000004.html">[Gift-ares-checkins] gift-ares/lib as_ares.h, 1.69,	1.70 as_session.c, 1.51, 1.52
+</A></li>
+        <LI>Next message: <A HREF="000006.html">[Gift-ares-checkins] gift-ares/lib as_share_man.c,1.19,1.20
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5">[ date ]</a>
+              <a href="thread.html#5">[ thread ]</a>
+              <a href="subject.html#5">[ subject ]</a>
+              <a href="author.html#5">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Update of /cvsroot/gift-ares/gift-ares/lib
+In directory sheep:/tmp/cvs-serv31880/lib
+
+Modified Files:
+	as_share_man.c 
+Log Message:
+Typo.
+
+Index: as_share_man.c
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/lib/as_share_man.c,v
+retrieving revision 1.18
+retrieving revision 1.19
+diff -u -d -r1.18 -r1.19
+--- as_share_man.c	11 Oct 2006 18:54:01 -0000	1.18
++++ as_share_man.c	14 Jan 2007 14:35:45 -0000	1.19
+@@ -157,10 +157,10 @@
+ 
+ static as_bool conglobulator_assimilate (Conglobulator *glob, ASPacket *p)
+ {
+-	if (as_packet_size (p) &gt; 700)
++	if (as_packet_size (p) &gt;= 700)
+ 	{
+-		AS_WARN_1 (&quot;Share packet is larger than 700 bytes (%d). &quot;
+-		           &quot;Supernodes will this and subsequent packets in compressed envelope!&quot;,
++		AS_WARN_1 (&quot;Share packet is larger than 699 bytes (%d). &quot;
++		           &quot;Supernodes will drop this and subsequent packets in compressed envelope!&quot;,
+ 		           as_packet_size (p));
+ 	}
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000004.html">[Gift-ares-checkins] gift-ares/lib as_ares.h, 1.69,	1.70 as_session.c, 1.51, 1.52
+</A></li>
+	<LI>Next message: <A HREF="000006.html">[Gift-ares-checkins] gift-ares/lib as_share_man.c,1.19,1.20
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5">[ date ]</a>
+              <a href="thread.html#5">[ thread ]</a>
+              <a href="subject.html#5">[ subject ]</a>
+              <a href="author.html#5">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/gift-ares-checkins">More information about the Gift-ares-checkins
+mailing list</a><br>
+</body></html>

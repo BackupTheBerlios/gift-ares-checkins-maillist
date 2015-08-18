@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Gift-ares-checkins] gift-ares/lib as_sha1.c,1.3,1.4
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/gift-ares-checkins/2007-January/index.html" >
+   <LINK REL="made" HREF="mailto:gift-ares-checkins%40lists.berlios.de?Subject=Re%3A%20%5BGift-ares-checkins%5D%20gift-ares/lib%20as_sha1.c%2C1.3%2C1.4&In-Reply-To=%3C20070114132521.A35C1D28F8%40mail.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000000.html">
+   <LINK REL="Next"  HREF="000002.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Gift-ares-checkins] gift-ares/lib as_sha1.c,1.3,1.4</H1>
+    <B>mkern</B> 
+    <A HREF="mailto:gift-ares-checkins%40lists.berlios.de?Subject=Re%3A%20%5BGift-ares-checkins%5D%20gift-ares/lib%20as_sha1.c%2C1.3%2C1.4&In-Reply-To=%3C20070114132521.A35C1D28F8%40mail.berlios.de%3E"
+       TITLE="[Gift-ares-checkins] gift-ares/lib as_sha1.c,1.3,1.4">nobody at sheep.berlios.de
+       </A><BR>
+    <I>Sun Jan 14 14:25:21 CET 2007</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000000.html">[Gift-ares-checkins] gift-ares TODO,1.27,1.28
+</A></li>
+        <LI>Next message: <A HREF="000002.html">[Gift-ares-checkins] gift-ares TODO,1.28,1.29
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1">[ date ]</a>
+              <a href="thread.html#1">[ thread ]</a>
+              <a href="subject.html#1">[ subject ]</a>
+              <a href="author.html#1">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Update of /cvsroot/gift-ares/gift-ares/lib
+In directory sheep:/tmp/cvs-serv23602/lib
+
+Modified Files:
+	as_sha1.c 
+Log Message:
+Fixed special ares sha1 transfrom for 64 bit machines.
+
+Index: as_sha1.c
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/lib/as_sha1.c,v
+retrieving revision 1.3
+retrieving revision 1.4
+diff -u -d -r1.3 -r1.4
+--- as_sha1.c	9 Jul 2006 13:06:25 -0000	1.3
++++ as_sha1.c	14 Jan 2007 13:24:03 -0000	1.4
+@@ -256,10 +256,59 @@
+ 
+ 	dp = sha_info-&gt;data;
+ 
+-	COPY_BE32x16(W, 0,dp,0);
+-	COPY_BE32x16(W, 4,dp,16);
+-	COPY_BE32x16(W, 8,dp,32);
+-	COPY_BE32x16(W,12,dp,48);
++/*
++the following makes sure that at least one code block below is
++traversed or an error is reported, without the necessity for nested
++preprocessor if/else/endif blocks, which are a great pain in the
++nether regions of the anatomy...
++*/
++#undef SWAP_DONE
++
++#if (SHA_BYTE_ORDER == 1234)
++#define SWAP_DONE
++	for (i = 0; i &lt; 16; ++i) {
++		T = *((unsigned long *) dp);
++		dp += 4;
++		W[i] =	((T &lt;&lt; 24) &amp; 0xff000000) | ((T &lt;&lt;  8) &amp; 0x00ff0000) |
++				((T &gt;&gt;	8) &amp; 0x0000ff00) | ((T &gt;&gt; 24) &amp; 0x000000ff);
++	}
++#endif /* SHA_BYTE_ORDER == 1234 */
++
++#if (SHA_BYTE_ORDER == 4321)
++#define SWAP_DONE
++	for (i = 0; i &lt; 16; ++i) {
++		T = *((unsigned long *) dp);
++		dp += 4;
++		W[i] = T32(T);
++	}
++#endif /* SHA_BYTE_ORDER == 4321 */
++
++#if (SHA_BYTE_ORDER == 12345678)
++#define SWAP_DONE
++	for (i = 0; i &lt; 16; i += 2) {
++		T = *((unsigned long *) dp);
++		dp += 8;
++		W[i] =	((T &lt;&lt; 24) &amp; 0xff000000) | ((T &lt;&lt;  8) &amp; 0x00ff0000) |
++				((T &gt;&gt;	8) &amp; 0x0000ff00) | ((T &gt;&gt; 24) &amp; 0x000000ff);
++		T &gt;&gt;= 32;
++		W[i+1] = ((T &lt;&lt; 24) &amp; 0xff000000) | ((T &lt;&lt;	8) &amp; 0x00ff0000) |
++				 ((T &gt;&gt;  8) &amp; 0x0000ff00) | ((T &gt;&gt; 24) &amp; 0x000000ff);
++	}
++#endif /* SHA_BYTE_ORDER == 12345678 */
++
++#if (SHA_BYTE_ORDER == 87654321)
++#define SWAP_DONE
++	for (i = 0; i &lt; 16; i += 2) {
++		T = *((unsigned long *) dp);
++		dp += 8;
++		W[i] = T32(T &gt;&gt; 32);
++		W[i+1] = T32(T);
++	}
++#endif /* SHA_BYTE_ORDER == 87654321 */
++
++#ifndef SWAP_DONE
++#error Unknown byte order -- you need to add code here
++#endif /* SWAP_DONE */
+ 
+ 	for (i = 16; i &lt; 80; ++i) {
+ 		W[i] = W[i-3] ^ W[i-8] ^ W[i-14] ^ W[i-16];
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000000.html">[Gift-ares-checkins] gift-ares TODO,1.27,1.28
+</A></li>
+	<LI>Next message: <A HREF="000002.html">[Gift-ares-checkins] gift-ares TODO,1.28,1.29
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1">[ date ]</a>
+              <a href="thread.html#1">[ thread ]</a>
+              <a href="subject.html#1">[ subject ]</a>
+              <a href="author.html#1">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/gift-ares-checkins">More information about the Gift-ares-checkins
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,564 @@
+From nobody at sheep.berlios.de  Tue Jan  9 17:18:54 2007
+From: nobody at sheep.berlios.de (mkern)
+Date: Tue,  9 Jan 2007 17:18:54 +0100 (CET)
+Subject: [Gift-ares-checkins] gift-ares TODO,1.27,1.28
+Message-ID: <20070109161854.04D97D4FBB@mail.berlios.de>
+
+Update of /cvsroot/gift-ares/gift-ares
+In directory sheep:/tmp/cvs-serv10637
+
+Modified Files:
+	TODO 
+Log Message:
+SHA1 still not fully working on 64 bit.
+
+Index: TODO
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/TODO,v
+retrieving revision 1.27
+retrieving revision 1.28
+diff -u -d -r1.27 -r1.28
+--- TODO	17 Dec 2005 23:05:03 -0000	1.27
++++ TODO	9 Jan 2007 16:17:37 -0000	1.28
+@@ -5,6 +5,8 @@
+ 
+ Essential stuff:
+ 
++- Special Ares SHA1 still doesn't work on 64 bit machines, I think
++
+ - Send proper 0x0a field in download request so we get a good position in the queue
+ 
+ - Handle binary push replies
+
+
+
+From nobody at sheep.berlios.de  Sun Jan 14 14:25:21 2007
+From: nobody at sheep.berlios.de (mkern)
+Date: Sun, 14 Jan 2007 14:25:21 +0100 (CET)
+Subject: [Gift-ares-checkins] gift-ares/lib as_sha1.c,1.3,1.4
+Message-ID: <20070114132521.A35C1D28F8@mail.berlios.de>
+
+Update of /cvsroot/gift-ares/gift-ares/lib
+In directory sheep:/tmp/cvs-serv23602/lib
+
+Modified Files:
+	as_sha1.c 
+Log Message:
+Fixed special ares sha1 transfrom for 64 bit machines.
+
+Index: as_sha1.c
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/lib/as_sha1.c,v
+retrieving revision 1.3
+retrieving revision 1.4
+diff -u -d -r1.3 -r1.4
+--- as_sha1.c	9 Jul 2006 13:06:25 -0000	1.3
++++ as_sha1.c	14 Jan 2007 13:24:03 -0000	1.4
+@@ -256,10 +256,59 @@
+ 
+ 	dp = sha_info->data;
+ 
+-	COPY_BE32x16(W, 0,dp,0);
+-	COPY_BE32x16(W, 4,dp,16);
+-	COPY_BE32x16(W, 8,dp,32);
+-	COPY_BE32x16(W,12,dp,48);
++/*
++the following makes sure that at least one code block below is
++traversed or an error is reported, without the necessity for nested
++preprocessor if/else/endif blocks, which are a great pain in the
++nether regions of the anatomy...
++*/
++#undef SWAP_DONE
++
++#if (SHA_BYTE_ORDER == 1234)
++#define SWAP_DONE
++	for (i = 0; i < 16; ++i) {
++		T = *((unsigned long *) dp);
++		dp += 4;
++		W[i] =	((T << 24) & 0xff000000) | ((T <<  8) & 0x00ff0000) |
++				((T >>	8) & 0x0000ff00) | ((T >> 24) & 0x000000ff);
++	}
++#endif /* SHA_BYTE_ORDER == 1234 */
++
++#if (SHA_BYTE_ORDER == 4321)
++#define SWAP_DONE
++	for (i = 0; i < 16; ++i) {
++		T = *((unsigned long *) dp);
++		dp += 4;
++		W[i] = T32(T);
++	}
++#endif /* SHA_BYTE_ORDER == 4321 */
++
++#if (SHA_BYTE_ORDER == 12345678)
++#define SWAP_DONE
++	for (i = 0; i < 16; i += 2) {
++		T = *((unsigned long *) dp);
++		dp += 8;
++		W[i] =	((T << 24) & 0xff000000) | ((T <<  8) & 0x00ff0000) |
++				((T >>	8) & 0x0000ff00) | ((T >> 24) & 0x000000ff);
++		T >>= 32;
++		W[i+1] = ((T << 24) & 0xff000000) | ((T <<	8) & 0x00ff0000) |
++				 ((T >>  8) & 0x0000ff00) | ((T >> 24) & 0x000000ff);
++	}
++#endif /* SHA_BYTE_ORDER == 12345678 */
++
++#if (SHA_BYTE_ORDER == 87654321)
++#define SWAP_DONE
++	for (i = 0; i < 16; i += 2) {
++		T = *((unsigned long *) dp);
++		dp += 8;
++		W[i] = T32(T >> 32);
++		W[i+1] = T32(T);
++	}
++#endif /* SHA_BYTE_ORDER == 87654321 */
++
++#ifndef SWAP_DONE
++#error Unknown byte order -- you need to add code here
++#endif /* SWAP_DONE */
+ 
+ 	for (i = 16; i < 80; ++i) {
+ 		W[i] = W[i-3] ^ W[i-8] ^ W[i-14] ^ W[i-16];
+
+
+
+From nobody at sheep.berlios.de  Sun Jan 14 14:25:26 2007
+From: nobody at sheep.berlios.de (mkern)
+Date: Sun, 14 Jan 2007 14:25:26 +0100 (CET)
+Subject: [Gift-ares-checkins] gift-ares TODO,1.28,1.29
+Message-ID: <20070114132526.61BBAD28F8@mail.berlios.de>
+
+Update of /cvsroot/gift-ares/gift-ares
+In directory sheep:/tmp/cvs-serv23602
+
+Modified Files:
+	TODO 
+Log Message:
+Fixed special ares sha1 transfrom for 64 bit machines.
+
+Index: TODO
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/TODO,v
+retrieving revision 1.28
+retrieving revision 1.29
+diff -u -d -r1.28 -r1.29
+--- TODO	9 Jan 2007 16:17:37 -0000	1.28
++++ TODO	14 Jan 2007 13:24:03 -0000	1.29
+@@ -5,8 +5,6 @@
+ 
+ Essential stuff:
+ 
+-- Special Ares SHA1 still doesn't work on 64 bit machines, I think
+-
+ - Send proper 0x0a field in download request so we get a good position in the queue
+ 
+ - Handle binary push replies
+
+
+
+From nobody at sheep.berlios.de  Sun Jan 14 15:30:49 2007
+From: nobody at sheep.berlios.de (mkern)
+Date: Sun, 14 Jan 2007 15:30:49 +0100 (CET)
+Subject: [Gift-ares-checkins] gift-ares ChangeLog,1.10,1.11
+Message-ID: <20070114143049.1F5E3D5959@mail.berlios.de>
+
+Update of /cvsroot/gift-ares/gift-ares
+In directory sheep:/tmp/cvs-serv31195
+
+Modified Files:
+	ChangeLog 
+Log Message:
+Ping supernode every 3 minutes.
+
+Index: ChangeLog
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/ChangeLog,v
+retrieving revision 1.10
+retrieving revision 1.11
+diff -u -d -r1.10 -r1.11
+--- ChangeLog	9 Jul 2006 13:06:22 -0000	1.10
++++ ChangeLog	14 Jan 2007 14:29:30 -0000	1.11
+@@ -1,5 +1,7 @@
+  $Id$
+ 
++	* Added 3 minute periodic stats ping to supernode.
++
+ 	* Made SHA1 implementation work correctly on 64 bit machines.
+ 
+ gift-ares 0.3.0:
+
+
+
+From nobody at sheep.berlios.de  Sun Jan 14 15:30:54 2007
+From: nobody at sheep.berlios.de (mkern)
+Date: Sun, 14 Jan 2007 15:30:54 +0100 (CET)
+Subject: [Gift-ares-checkins] gift-ares/lib as_ares.h, 1.69,
+	1.70 as_session.c, 1.51, 1.52
+Message-ID: <20070114143054.A4BD6D5959@mail.berlios.de>
+
+Update of /cvsroot/gift-ares/gift-ares/lib
+In directory sheep:/tmp/cvs-serv31195/lib
+
+Modified Files:
+	as_ares.h as_session.c 
+Log Message:
+Ping supernode every 3 minutes.
+
+Index: as_ares.h
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/lib/as_ares.h,v
+retrieving revision 1.69
+retrieving revision 1.70
+diff -u -d -r1.69 -r1.70
+--- as_ares.h	26 Nov 2005 13:34:05 -0000	1.69
++++ as_ares.h	14 Jan 2007 14:29:31 -0000	1.70
+@@ -226,11 +226,12 @@
+ /* Timeout for supernode handshake after connecting */
+ #define AS_SESSION_HANDSHAKE_TIMEOUT (30 * SECONDS)
+ 
+-/* Maximum period of inactivity for established supernode connections */
+-#define AS_SESSION_IDLE_TIMEOUT (8 * MINUTES)
++/* Time between stats requests (pings) sent to supernode. Ares seems to
++ * disconnects us if we don't sent a ping every 5 minutes. */
++#define AS_SESSION_PING_INTERVAL (3 * MINUTES)
+ 
+ /* Timeout for ping replies */
+-#define AS_SESSION_PING_TIMEOUT (1 * MINUTES)
++#define AS_SESSION_PING_TIMEOUT (2 * MINUTES)
+ 
+ /* Number of simultaneous connection attempts when connecting to supernodes */
+ #define AS_SESSION_PARALLEL_ATTEMPTS (10)
+
+Index: as_session.c
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/lib/as_session.c,v
+retrieving revision 1.51
+retrieving revision 1.52
+diff -u -d -r1.51 -r1.52
+--- as_session.c	5 Jan 2006 16:37:38 -0000	1.51
++++ as_session.c	14 Jan 2007 14:29:31 -0000	1.52
+@@ -199,8 +199,6 @@
+ 		return FALSE;
+ 	}
+ 
+-	timer_reset (session->ping_timer);
+-
+ 	return TRUE;
+ }
+ 
+@@ -286,18 +284,20 @@
+ 	ASPacketType packet_type;
+ 	as_uint16 packet_len;
+ 
+-	if (net_sock_error (fd))
++	if (input == INVALID_INPUT || net_sock_error (fd))
+ 	{
+-		AS_HEAVY_DBG_2 ("Connection with %s:%d closed remotely",
+-		                net_ip_str (session->host), session->port);
++		AS_WARN_2 ("Bad fd for connection with %s:%d. Closing session.",
++		           net_ip_str (session->host), session->port);
+ 		session_error (session);
+ 		return;
+ 	}
+ 
++	assert (session->input == input);
++
+ 	if (!as_packet_recv (session->packet, session->c))	
+ 	{
+-		AS_WARN_2 ("Recv failed from %s:%d", net_ip_str (session->host),
+-		           session->port);
++		AS_DBG_2 ("Connection to %s:%d closed remotely",
++		          net_ip_str (session->host), session->port);
+ 		session_error (session);
+ 		return;
+ 	}
+@@ -455,10 +455,10 @@
+ 	if (AS->upman)
+ 	{
+ 		/* FIXME: These values are not accurate if queuing is done by giFT */
+-		as_packet_put_le16 (packet, 0); /* 'my_speed' */
++		as_packet_put_le16 (packet, 0); /* 'my_speed' bytes/sec divided by 100 */
+ 		as_packet_put_8 (packet, (as_uint8)AS->upman->nuploads);
+ 		as_packet_put_8 (packet, (as_uint8)AS_CONF_INT (AS_UPLOAD_MAX_ACTIVE));
+-		as_packet_put_8 (packet, (as_uint8)0); /* 'proxy_count' */
++		as_packet_put_8 (packet, (as_uint8)0); /* 0x00 hardcoded */
+ 		as_packet_put_8 (packet, (as_uint8)AS->upman->nqueued);
+ 	}
+ 	else
+@@ -664,9 +664,12 @@
+ 	if (!session_set_state (session, SESSION_CONNECTED, TRUE))
+ 		return FALSE; /* session was freed */
+ 
+-	session->ping_timer = timer_add (AS_SESSION_IDLE_TIMEOUT,
++	/* setup ping timer and send one ping right now */
++	session->ping_timer = timer_add (AS_SESSION_PING_INTERVAL,
+ 	                                 (TimerCallback)session_ping, session);
+ 
++	session_ping (session);
++
+ 	return TRUE;
+ }
+ 
+@@ -711,7 +714,7 @@
+ /* we sent a ping and got no response: disconnect */
+ static as_bool session_ping_timeout (ASSession *session)
+ {
+-	AS_ERR_2 ("Ping timeout for %s:%d",
++	AS_ERR_2 ("Ping timeout for %s:%d, closing session.",
+ 	          net_ip_str (session->host), session->port);
+ 
+ 	session_error (session); /* callback may free us */
+
+
+
+From nobody at sheep.berlios.de  Sun Jan 14 15:37:03 2007
+From: nobody at sheep.berlios.de (mkern)
+Date: Sun, 14 Jan 2007 15:37:03 +0100 (CET)
+Subject: [Gift-ares-checkins] gift-ares/lib as_share_man.c,1.18,1.19
+Message-ID: <20070114143703.05B66D3D96@mail.berlios.de>
+
+Update of /cvsroot/gift-ares/gift-ares/lib
+In directory sheep:/tmp/cvs-serv31880/lib
+
+Modified Files:
+	as_share_man.c 
+Log Message:
+Typo.
+
+Index: as_share_man.c
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/lib/as_share_man.c,v
+retrieving revision 1.18
+retrieving revision 1.19
+diff -u -d -r1.18 -r1.19
+--- as_share_man.c	11 Oct 2006 18:54:01 -0000	1.18
++++ as_share_man.c	14 Jan 2007 14:35:45 -0000	1.19
+@@ -157,10 +157,10 @@
+ 
+ static as_bool conglobulator_assimilate (Conglobulator *glob, ASPacket *p)
+ {
+-	if (as_packet_size (p) > 700)
++	if (as_packet_size (p) >= 700)
+ 	{
+-		AS_WARN_1 ("Share packet is larger than 700 bytes (%d). "
+-		           "Supernodes will this and subsequent packets in compressed envelope!",
++		AS_WARN_1 ("Share packet is larger than 699 bytes (%d). "
++		           "Supernodes will drop this and subsequent packets in compressed envelope!",
+ 		           as_packet_size (p));
+ 	}
+ 
+
+
+
+From nobody at sheep.berlios.de  Sun Jan 14 17:45:51 2007
+From: nobody at sheep.berlios.de (mkern)
+Date: Sun, 14 Jan 2007 17:45:51 +0100 (CET)
+Subject: [Gift-ares-checkins] gift-ares/lib as_share_man.c,1.19,1.20
+Message-ID: <20070114164551.75B5DD3960@mail.berlios.de>
+
+Update of /cvsroot/gift-ares/gift-ares/lib
+In directory sheep:/tmp/cvs-serv8576/lib
+
+Modified Files:
+	as_share_man.c 
+Log Message:
+Limit share packets to the same size ares uses.
+
+Index: as_share_man.c
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/lib/as_share_man.c,v
+retrieving revision 1.19
+retrieving revision 1.20
+diff -u -d -r1.19 -r1.20
+--- as_share_man.c	14 Jan 2007 14:35:45 -0000	1.19
++++ as_share_man.c	14 Jan 2007 16:44:33 -0000	1.20
+@@ -135,9 +135,10 @@
+ } Conglobulator;
+ 
+ /* The maximum glob size after which we compress and send; note that
+- * this is only vaguely related to maximum packet size.
++ * this is only vaguely related to maximum packet size. Ares limits this
++ * to 800, do the same here.
+  */
+-#define GLOB_MAX 4096
++#define GLOB_MAX 800
+ 
+ static as_bool conglobulator_flush (Conglobulator *glob)
+ {
+
+
+
+From nobody at sheep.berlios.de  Sun Jan 14 17:48:23 2007
+From: nobody at sheep.berlios.de (mkern)
+Date: Sun, 14 Jan 2007 17:48:23 +0100 (CET)
+Subject: [Gift-ares-checkins] gift-ares ChangeLog,1.11,1.12
+Message-ID: <20070114164823.2C2F0D3960@mail.berlios.de>
+
+Update of /cvsroot/gift-ares/gift-ares
+In directory sheep:/tmp/cvs-serv9080
+
+Modified Files:
+	ChangeLog 
+Log Message:
+Only connect to new supernodes which don't require encryption.
+
+Index: ChangeLog
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/ChangeLog,v
+retrieving revision 1.11
+retrieving revision 1.12
+diff -u -d -r1.11 -r1.12
+--- ChangeLog	14 Jan 2007 14:29:30 -0000	1.11
++++ ChangeLog	14 Jan 2007 16:47:05 -0000	1.12
+@@ -1,5 +1,7 @@
+  $Id$
+ 
++	* Only connect to new supernodes which don't require encryption.
++
+ 	* Added 3 minute periodic stats ping to supernode.
+ 
+ 	* Made SHA1 implementation work correctly on 64 bit machines.
+
+
+
+From nobody at sheep.berlios.de  Sun Jan 14 17:48:23 2007
+From: nobody at sheep.berlios.de (mkern)
+Date: Sun, 14 Jan 2007 17:48:23 +0100 (CET)
+Subject: [Gift-ares-checkins] gift-ares/lib as_session.c,1.52,1.53
+Message-ID: <20070114164823.6B9D9D7F03@mail.berlios.de>
+
+Update of /cvsroot/gift-ares/gift-ares/lib
+In directory sheep:/tmp/cvs-serv9080/lib
+
+Modified Files:
+	as_session.c 
+Log Message:
+Only connect to new supernodes which don't require encryption.
+
+Index: as_session.c
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/lib/as_session.c,v
+retrieving revision 1.52
+retrieving revision 1.53
+diff -u -d -r1.52 -r1.53
+--- as_session.c	14 Jan 2007 14:29:31 -0000	1.52
++++ as_session.c	14 Jan 2007 16:47:05 -0000	1.53
+@@ -192,6 +192,9 @@
+ 		return FALSE;
+ 	}
+ 
++	AS_HEAVY_DBG_3 ("Sending packet 0x%02X of size %d to %s",
++	                type, as_packet_size (body), net_ip_str (session->host));
++
+ 	/* send it off */
+ 	if (!as_packet_send (body, session->c))
+ 	{
+@@ -283,17 +286,19 @@
+ 	ASPacket *packet;
+ 	ASPacketType packet_type;
+ 	as_uint16 packet_len;
++	int sock_err;
+ 
+-	if (input == INVALID_INPUT || net_sock_error (fd))
++	assert (input != INVALID_INPUT);
++	assert (session->input == input);
++
++	if ((sock_err = net_sock_error (fd)) != 0)
+ 	{
+-		AS_WARN_2 ("Bad fd for connection with %s:%d. Closing session.",
+-		           net_ip_str (session->host), session->port);
++		AS_DBG_3 ("Connection to %s:%d closed remotely. Socket error: %d.",
++		          net_ip_str (session->host), session->port, sock_err);
+ 		session_error (session);
+ 		return;
+ 	}
+ 
+-	assert (session->input == input);
+-
+ 	if (!as_packet_recv (session->packet, session->c))	
+ 	{
+ 		AS_DBG_2 ("Connection to %s:%d closed remotely",
+@@ -588,6 +593,20 @@
+ 	as_packet_dump (packet);
+ #endif
+ 
++#if 1
++	/* Only connect to newest nodes without encryption. There still seem to be
++	 * a lot of nodes which return PACKET_ACK2 but still require encryption we
++	 * do not support.
++	 */
++	if (type != PACKET_ACK_NOCRYPT)
++	{
++		AS_DBG_2 ("Supernode %s returned legacy ACK 0x%02X, disconnecting",
++		          net_ip_str (session->host), type);
++		session_error (session);
++		return FALSE;
++	}
++#endif
++
+ 	/* This is the child count of the supernode. */
+ 	children = as_packet_get_le16 (packet);
+ 
+@@ -610,18 +629,6 @@
+ 		as_nodeman_update_reported (AS->nodeman, host, port);
+ 	}
+ 
+-#if 0
+-	/* Don't connect to older nodes for testing (but still use them to
+-	 * get new IPs).
+-	 */
+-	if (type == PACKET_ACK)
+-	{
+-		session_error (session);
+-		free (supernode_guid);
+-		return FALSE;
+-	}
+-#endif
+-
+ #if 0	
+ 	if (children > 350)
+ 	{
+@@ -656,7 +663,6 @@
+ 	AS_DBG_5 ("Handshake with %s:%d complete. ACK: 0x%02X, seeds: 0x%04X and 0x%02X",
+ 		      net_ip_str (session->host), session->port, (int)type,
+ 			  (int)seed_16, (int)seed_8);
+-
+ 
+ 	/* remove handshake timeout */
+ 	timer_remove_zero (&session->handshake_timer);
+
+
+
+From nobody at sheep.berlios.de  Sun Jan 14 17:50:26 2007
+From: nobody at sheep.berlios.de (mkern)
+Date: Sun, 14 Jan 2007 17:50:26 +0100 (CET)
+Subject: [Gift-ares-checkins] gift-ares TODO,1.29,1.30
+Message-ID: <20070114165026.CF13AD804E@mail.berlios.de>
+
+Update of /cvsroot/gift-ares/gift-ares
+In directory sheep:/tmp/cvs-serv9664
+
+Modified Files:
+	TODO 
+Log Message:
+More stuff to do.
+
+Index: TODO
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/TODO,v
+retrieving revision 1.29
+retrieving revision 1.30
+diff -u -d -r1.29 -r1.30
+--- TODO	14 Jan 2007 13:24:03 -0000	1.29
++++ TODO	14 Jan 2007 16:49:03 -0000	1.30
+@@ -5,6 +5,8 @@
+ 
+ Essential stuff:
+ 
++- Handle 0x13 end of search packet
++
+ - Send proper 0x0a field in download request so we get a good position in the queue
+ 
+ - Handle binary push replies
+
+
+

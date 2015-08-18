@@ -1,0 +1,91 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Gift-ares-checkins] gift-ares/lib as_share_man.c,1.19,1.20
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/gift-ares-checkins/2007-January/index.html" >
+   <LINK REL="made" HREF="mailto:gift-ares-checkins%40lists.berlios.de?Subject=Re%3A%20%5BGift-ares-checkins%5D%20gift-ares/lib%20as_share_man.c%2C1.19%2C1.20&In-Reply-To=%3C20070114164551.75B5DD3960%40mail.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000005.html">
+   <LINK REL="Next"  HREF="000007.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Gift-ares-checkins] gift-ares/lib as_share_man.c,1.19,1.20</H1>
+    <B>mkern</B> 
+    <A HREF="mailto:gift-ares-checkins%40lists.berlios.de?Subject=Re%3A%20%5BGift-ares-checkins%5D%20gift-ares/lib%20as_share_man.c%2C1.19%2C1.20&In-Reply-To=%3C20070114164551.75B5DD3960%40mail.berlios.de%3E"
+       TITLE="[Gift-ares-checkins] gift-ares/lib as_share_man.c,1.19,1.20">nobody at sheep.berlios.de
+       </A><BR>
+    <I>Sun Jan 14 17:45:51 CET 2007</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000005.html">[Gift-ares-checkins] gift-ares/lib as_share_man.c,1.18,1.19
+</A></li>
+        <LI>Next message: <A HREF="000007.html">[Gift-ares-checkins] gift-ares ChangeLog,1.11,1.12
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6">[ date ]</a>
+              <a href="thread.html#6">[ thread ]</a>
+              <a href="subject.html#6">[ subject ]</a>
+              <a href="author.html#6">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Update of /cvsroot/gift-ares/gift-ares/lib
+In directory sheep:/tmp/cvs-serv8576/lib
+
+Modified Files:
+	as_share_man.c 
+Log Message:
+Limit share packets to the same size ares uses.
+
+Index: as_share_man.c
+===================================================================
+RCS file: /cvsroot/gift-ares/gift-ares/lib/as_share_man.c,v
+retrieving revision 1.19
+retrieving revision 1.20
+diff -u -d -r1.19 -r1.20
+--- as_share_man.c	14 Jan 2007 14:35:45 -0000	1.19
++++ as_share_man.c	14 Jan 2007 16:44:33 -0000	1.20
+@@ -135,9 +135,10 @@
+ } Conglobulator;
+ 
+ /* The maximum glob size after which we compress and send; note that
+- * this is only vaguely related to maximum packet size.
++ * this is only vaguely related to maximum packet size. Ares limits this
++ * to 800, do the same here.
+  */
+-#define GLOB_MAX 4096
++#define GLOB_MAX 800
+ 
+ static as_bool conglobulator_flush (Conglobulator *glob)
+ {
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000005.html">[Gift-ares-checkins] gift-ares/lib as_share_man.c,1.18,1.19
+</A></li>
+	<LI>Next message: <A HREF="000007.html">[Gift-ares-checkins] gift-ares ChangeLog,1.11,1.12
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6">[ date ]</a>
+              <a href="thread.html#6">[ thread ]</a>
+              <a href="subject.html#6">[ subject ]</a>
+              <a href="author.html#6">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/gift-ares-checkins">More information about the Gift-ares-checkins
+mailing list</a><br>
+</body></html>
